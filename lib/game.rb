@@ -1,67 +1,83 @@
-require 'colorize'
+class Game
+  #кол-во допустимых ошибок
+  TOTAL_ERRORS_ALLOWED = 7
 
-class ConsoleInterface
-	# Содержит все файлы из папки figures, помешённые в массив
-	FIGURES =
-	  Dir["#{__dir__}/../data/figures/*.txt"].sort
-	  map { |file_name| File.read(file_name) }
+  # экземпляр на вход получает загаданное слово
+  # задаем переменную экземпляра с буквами загаданного слова
+  # и пустой массив для дальнейшего сбора в него вводимых букв
+  def initialize(word)
+    @letters = word.chars
+    @user_guesses = []
+  end
 
-	# На вход экземпляр ConsoleInterface принимает экземпляр Game.
-	# Экземпляр ConsoleInterface выводит информацию юзеру:
-	# что означает - выводит сам, что не знает - берёт у экземпляра Game.
-    def initialize(game)
-    	@game = game
+  # возвращает буквы, которые отсутствуют в @letters(ошибочные)
+  def errors
+    @user_guesses - normalized_letters
+  end
+
+  # возвращает кол-во ошибок, сделанных пользователем
+  def errors_made
+    errors.length
+  end
+
+  # отнимает от допустимого кол-ва ошибок, кол-во сделанных ошибок и
+  # возвращает кол-во ошибок, которые пользователь ещё может сделать
+  def errors_allowed
+    TOTAL_ERRORS_ALLOWED - errors_made
+  end
+
+  #возвращает массив с уже отгаданными буквами
+  def letters_to_guess
+    result =
+      @letters.map do |letter|
+        if @user_guesses.include?(letter)
+          letter
+        else
+          nil
+        end
+      end
+    result
+  end
+
+  # возвращает true, если у пользователя не осталось ошибок
+  # т.е. игра проиграна
+  def lost?
+    errors_allowed == 0
+  end
+
+  # заменяет при вводе Й-Ё на И-Е, чтобы они считались за одну букву
+  def normalize_letter(letter)
+    letter = "И" if letter == "Й"
+    letter = "Е" if letter == "Ё"
+    letter
+  end
+
+  # приводит Й-Ё в массиве с буквами к И-Е
+  def normalized_letters
+    @letters.map { |letter| normalize_letter(letter) }
+  end
+
+  # возвращает true, если один из методов в условии возвращает true
+  def over?
+    won? || lost?
+  end
+
+  # закидывает в массив букв введенных пользователем передаваемую букву.
+  # если игра не закончена и передаваемая буква отутствует в массиве
+  # введённых букв
+  def play!(letter)
+    if !over? && !@user_guesses.include?(letter)
+      @user_guesses << letter
     end
+  end
 
-    # Выводит в консоль текущее состояние игры
-    def print_out
-    	puts <<~END
-    	  #{"Слово: #{word_to_show}".colorize(:light_blue)}
-    	  #{figure.colorize(:yellow)}
-    	  #{"Ошибки (#{@game.errors_made}): #{errors_to_show}".colorize(:red)}
-    	  У вас осталось ошибок: #{@game.errors_allowed}
+  # возвращает true, если загаданное и введённое слова совпали
+  def won?
+    (@letters - @user_guesses).empty?
+  end
 
-    	END
-
-    	if @game.won?
-    		puts "Поздравляем, вы выиграли!".colorize(:green)
-    	elsif @game.lost!
-    		puts "Вы проиграли, загаданное слово: #{@game.word}".colorize(:red)
-    	end
-    end
-
-    # Возвращает ту фигуру из массива FIGURES, имя которой 
-    # Соответствует количеству ошибок, которые сделал пользователь
-    def figure
-    	FIGURES[@game.errors_made]
-    end
-
-    # Получает на вход массив уже угаданных букв, который на месте ещё не отгаданных
-    # Содержит nil. Метод записывает в result вместо nil два подчёркивания
-    # а угаданные буквы оставляет без изменения. Возвращает этот массив в виде
-    # Строки, где элементы разделены пробелами, например "К 0 _ О _ _"
-    def word_to_show
-    	result =
-    	  @game.letters_to_quess.map do |letter|
-    	  	if letter == nil
-    	  		"__"
-    	  	else
-    	  		letter
-    	  	end
-    	  end
-
-    	  result.join(" ")
-    	end
-    end
-
-    # Получает массив ошибочных букв, склеивает их в строку вида "Х, У"
-    def errors_to_show
-    	@game.errors.join(", ")
-    end
-
-    # Получает букву из пользовательского ввода и приводит её к верхнему регтстру
-    def get_input
-    	print "Введите следующую букву: "
-    	gets[0].upcase
-    end
+  # возвращает загаданное слово
+  def word
+    @letters.join
+  end
 end
